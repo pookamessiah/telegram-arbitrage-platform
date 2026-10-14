@@ -1,0 +1,5 @@
+pyrogram==2.0.106
+tgcrypto==1.2.5
+google-generativeai==0.8.3
+pymysql==1.1.1
+python-dotenv==1.0.1
