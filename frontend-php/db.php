@@ -1,9 +1,13 @@
 <?php
-$host = getenv('DB_HOST') ?: '127.0.0.1';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$host = getenv('DB_HOST') ?: 'iriguchi.proxy.rlwy.net';
 $user = getenv('DB_USER') ?: 'root';
-$pass = getenv('DB_PASS') ?: '';
-$dbname = getenv('DB_NAME') ?: 'telegram_platform';
-$port = getenv('DB_PORT') ?: '3306';
+$pass = getenv('DB_PASS') ?: 'KQTStEeMXresazDMKuCKkWtPLxfeGGsL';
+$dbname = getenv('DB_NAME') ?: 'railway';
+$port = getenv('DB_PORT') ?: '34558';
 
 try {
     $dsn = "mysql:host=$host;dbname=$dbname;port=$port;charset=utf8mb4";
@@ -13,6 +17,6 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
 } catch (PDOException $e) {
-    die("Database Connection Failure: " . $e->getMessage());
+    die("Database Connection Failure: " . $e->getMessage() . " (Host: $host, Port: $port, DB: $dbname)");
 }
 ?>
