@@ -1,0 +1,8 @@
+{
+    "name": "telegram-platform/frontend",
+    "description": "PHP Dashboard for Telegram Automation Platform",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo_mysql": "*"
+    }
+}
