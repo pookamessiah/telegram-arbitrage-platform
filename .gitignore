@@ -1,0 +1,19 @@
+# Python environment & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Pyrogram session storage & keys
+*.session
+*.session-journal
+
+# Environment variable files containing secrets
+.env
+config.local.py
+
+# Vendor & logs
+/vendor/
+*.log
