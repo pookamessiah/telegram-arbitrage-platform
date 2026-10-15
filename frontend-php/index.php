@@ -1,25 +1,40 @@
 <?php
-// Enable strict error reporting so errors show on screen
-error_reporting(E_ALL);
+// Force PHP to display all errors on the screen instead of a 500 page
 ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-require_once __DIR__ . '/db.php';
+try {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-$login_error = $register_error = $register_success = "";
+    $host = getenv('DB_HOST') ?: 'iriguchi.proxy.rlwy.net';
+    $user = getenv('DB_USER') ?: 'root';
+    $pass = getenv('DB_PASS') ?: 'KQTStEeMXresazDMKuCKkWtPLxfeGGsL';
+    $dbname = getenv('DB_NAME') ?: 'railway';
+    $port = getenv('DB_PORT') ?: '34558';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    $dsn = "mysql:host=$host;dbname=$dbname;port=$port;charset=utf8mb4";
+    $pdo = new PDO($dsn, $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ]);
 
-    // Registration Handler
-    if ($action === 'register') {
-        $username = trim($_POST['username'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
+    $login_error = $register_error = $register_success = "";
 
-        if (empty($username) || empty($email) || empty($password)) {
-            $register_error = "All fields are required.";
-        } else {
-            try {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $action = $_POST['action'] ?? '';
+
+        if ($action === 'register') {
+            $username = trim($_POST['username'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $password = $_POST['password'] ?? '';
+
+            if (empty($username) || empty($email) || empty($password)) {
+                $register_error = "All fields are required.";
+            } else {
                 $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR username = ?");
                 $stmt->execute([$email, $username]);
                 if ($stmt->fetch()) {
@@ -33,58 +48,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $register_error = "Database insertion failed.";
                     }
                 }
-            } catch (PDOException $e) {
-                $register_error = "SQL Error: " . $e->getMessage();
             }
-        }
-    } 
-    // Login Handler
-   elseif ($action === 'login') {
-    $identity = trim($_POST['identity'] ?? '');
-    $password = trim($_POST['password'] ?? '');
+        } elseif ($action === 'login') {
+            $identity = trim($_POST['identity'] ?? '');
+            $password = trim($_POST['password'] ?? '');
 
-    if (empty($identity) || empty($password)) {
-        $login_error = "Please enter both credentials.";
-    } else {
-        try {
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
-            $stmt->execute([$identity, $identity]);
-            $user = $stmt->fetch();
+            if (empty($identity) || empty($password)) {
+                $login_error = "Please enter both credentials.";
+            } else {
+                $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
+                $stmt->execute([$identity, $identity]);
+                $user = $stmt->fetch();
 
-            // --- INSTANT DEBUG SCREEN ---
-            if (!$user) {
-                die("<div style='padding:20px; background:#ffe6e6; color:red; font-family:sans-serif;'>
-                    <h3>DEBUG ERROR: User Not Found</h3>
-                    <p>Searched for identity: <b>" . htmlspecialchars($identity) . "</b></p>
-                    <p>Make sure this email/username actually exists in your database table.</p>
-                </div>");
+                if ($user && password_verify($password, $user['password_hash'])) {
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['role'] = $user['role'];
+                    header("Location: user/dashboard.php");
+                    exit;
+                } else {
+                    $login_error = "Invalid username/email or password.";
+                }
             }
-
-            if (!password_verify($password, $user['password_hash'])) {
-                die("<div style='padding:20px; background:#fff3cd; color:#856404; font-family:sans-serif;'>
-                    <h3>DEBUG ERROR: Password Verification Failed</h3>
-                    <p><b>User Found:</b> ID {$user['id']} | Username: {$user['username']} | Email: {$user['email']}</p>
-                    <p><b>Entered Password:</b> '" . htmlspecialchars($password) . "'</p>
-                    <p><b>Stored Hash in DB:</b> " . htmlspecialchars($user['password_hash']) . "</p>
-                    <p><b>password_verify() result:</b> FALSE</p>
-                    <hr>
-                    <p>To fix this instantly, run this SQL query in Railway console:</p>
-                    <code>UPDATE users SET password_hash = '" . password_hash('password123', PASSWORD_BCRYPT) . "' WHERE id = {$user['id']};</code>
-                    <p>Then try logging in with password: <b>password123</b></p>
-                </div>");
-            }
-            // -----------------------------
-
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
-            header("Location: user/dashboard.php");
-            exit;
-
-        } catch (PDOException $e) {
-            $login_error = "SQL Error: " . $e->getMessage();
         }
     }
+
+} catch (Throwable $e) {
+    // If anything fails, print the exact error on the screen instead of a 500 error
+    die("<div style='padding:30px; font-family:sans-serif; background:#ffeeee; color:#900;'>
+        <h2>Fatal Application Error:</h2>
+        <p>" . htmlspecialchars($e->getMessage()) . "</p>
+        <p><b>File:</b> " . $e->getFile() . " on line " . $e->getLine() . "</p>
+    </div>");
 }
 ?>
 <!DOCTYPE html>
@@ -110,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="tab-content" id="authTabContent">
             <!-- Login Tab -->
             <div class="tab-pane fade show active" id="login" role="tabpanel">
-                <?php if ($login_error): ?><div class="alert alert-danger py-2 small"><?= htmlspecialchars($login_error) ?></div><?php endif; ?>
+                <?php if (!empty($login_error)): ?><div class="alert alert-danger py-2 small"><?= htmlspecialchars($login_error) ?></div><?php endif; ?>
                 <form method="POST">
                     <input type="hidden" name="action" value="login">
                     <div class="mb-3">
@@ -127,8 +122,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- Register Tab -->
             <div class="tab-pane fade" id="register" role="tabpanel">
-                <?php if ($register_error): ?><div class="alert alert-danger py-2 small"><?= htmlspecialchars($register_error) ?></div><?php endif; ?>
-                <?php if ($register_success): ?><div class="alert alert-success py-2 small"><?= htmlspecialchars($register_success) ?></div><?php endif; ?>
+                <?php if (!empty($register_error)): ?><div class="alert alert-danger py-2 small"><?= htmlspecialchars($register_error) ?></div><?php endif; ?>
+                <?php if (!empty($register_success)): ?><div class="alert alert-success py-2 small"><?= htmlspecialchars($register_success) ?></div><?php endif; ?>
                 <form method="POST">
                     <input type="hidden" name="action" value="register">
                     <div class="mb-3">
