@@ -1,4 +1,8 @@
 <?php
+// Enable strict error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -17,6 +21,6 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
 } catch (PDOException $e) {
-    die("Database Connection Failure: " . $e->getMessage() . " (Host: $host, Port: $port, DB: $dbname)");
+    die("<h3>Database Connection Error:</h3> " . htmlspecialchars($e->getMessage()));
 }
 ?>
