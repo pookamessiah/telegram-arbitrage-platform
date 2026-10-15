@@ -39,30 +39,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } 
     // Login Handler
-    elseif ($action === 'login') {
-        $identity = trim($_POST['identity'] ?? '');
-        $password = trim($_POST['password'] ?? '');
+   elseif ($action === 'login') {
+    $identity = trim($_POST['identity'] ?? '');
+    $password = trim($_POST['password'] ?? '');
 
-        if (empty($identity) || empty($password)) {
-            $login_error = "Please enter both credentials.";
-        } else {
-            try {
-                $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
-                $stmt->execute([$identity, $identity]);
-                $user = $stmt->fetch();
+    if (empty($identity) || empty($password)) {
+        $login_error = "Please enter both credentials.";
+    } else {
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
+            $stmt->execute([$identity, $identity]);
+            $user = $stmt->fetch();
 
-                if ($user && password_verify($password, $user['password_hash'])) {
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['role'] = $user['role'];
-                    header("Location: user/dashboard.php");
-                    exit;
-                } else {
-                    $login_error = "Invalid username/email or password.";
-                }
-            } catch (PDOException $e) {
-                $login_error = "SQL Error: " . $e->getMessage();
+            // --- INSTANT DEBUG SCREEN ---
+            if (!$user) {
+                die("<div style='padding:20px; background:#ffe6e6; color:red; font-family:sans-serif;'>
+                    <h3>DEBUG ERROR: User Not Found</h3>
+                    <p>Searched for identity: <b>" . htmlspecialchars($identity) . "</b></p>
+                    <p>Make sure this email/username actually exists in your database table.</p>
+                </div>");
             }
+
+            if (!password_verify($password, $user['password_hash'])) {
+                die("<div style='padding:20px; background:#fff3cd; color:#856404; font-family:sans-serif;'>
+                    <h3>DEBUG ERROR: Password Verification Failed</h3>
+                    <p><b>User Found:</b> ID {$user['id']} | Username: {$user['username']} | Email: {$user['email']}</p>
+                    <p><b>Entered Password:</b> '" . htmlspecialchars($password) . "'</p>
+                    <p><b>Stored Hash in DB:</b> " . htmlspecialchars($user['password_hash']) . "</p>
+                    <p><b>password_verify() result:</b> FALSE</p>
+                    <hr>
+                    <p>To fix this instantly, run this SQL query in Railway console:</p>
+                    <code>UPDATE users SET password_hash = '" . password_hash('password123', PASSWORD_BCRYPT) . "' WHERE id = {$user['id']};</code>
+                    <p>Then try logging in with password: <b>password123</b></p>
+                </div>");
+            }
+            // -----------------------------
+
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role'] = $user['role'];
+            header("Location: user/dashboard.php");
+            exit;
+
+        } catch (PDOException $e) {
+            $login_error = "SQL Error: " . $e->getMessage();
         }
     }
 }
