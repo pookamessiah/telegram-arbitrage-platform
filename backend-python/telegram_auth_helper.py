@@ -7,7 +7,12 @@ from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PhoneCodeEx
 
 async def main():
     try:
-        input_data = json.loads(sys.stdin.read())
+        raw_input = sys.stdin.read()
+        if not raw_input:
+            print(json.dumps({"status": "error", "message": "No input received from PHP."}))
+            return
+
+        input_data = json.loads(raw_input)
         action = input_data.get("action")
         api_id = int(input_data.get("api_id"))
         api_hash = input_data.get("api_hash")
@@ -51,7 +56,6 @@ async def main():
             print(json.dumps({"status": "error", "message": "Invalid action specified."}))
             
     except Exception as e:
-        # Return the exact exception class name and message for debugging
         error_msg = f"{type(e).__name__}: {str(e)}"
         print(json.dumps({"status": "error", "message": error_msg}))
 
