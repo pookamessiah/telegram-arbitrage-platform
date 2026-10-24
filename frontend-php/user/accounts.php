@@ -61,7 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $auth_step = 2;
                     $success_msg = "Verification code sent to your Telegram app!";
                 } else {
-                    $error_msg = "Telegram Error: " . ($response['message'] ?? $error_output ?: 'Failed to send code.');
+                    $details = !empty(trim($error_output)) ? trim($error_output) : ($response['message'] ?? 'Failed to send code.');
+                    $error_msg = "Telegram Error: " . htmlspecialchars($details);
                 }
             } else {
                 $error_msg = "Failed to execute Python authentication helper.";
@@ -90,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "password" => $password ?: null
             ]);
 
-           $python_path = '/app/backend-python/telegram_auth_helper.py';
+            $python_path = '/app/backend-python/telegram_auth_helper.py';
             $command = "python3 " . escapeshellarg($python_path);
             
             $descriptors = [
@@ -134,8 +135,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $auth_step = 2;
                     $error_msg = "Two-Step Verification (2FA) password is required for this account.";
                 } else {
+                    $details = !empty(trim($error_output)) ? trim($error_output) : ($response['message'] ?? 'Invalid code or expired.');
                     $auth_step = 2;
-                    $error_msg = "Verification Error: " . ($response['message'] ?? 'Invalid code or expired.');
+                    $error_msg = "Verification Error: " . htmlspecialchars($details);
                 }
             } else {
                 $error_msg = "Failed to execute Python verification helper.";
