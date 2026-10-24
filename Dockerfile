@@ -12,8 +12,8 @@ RUN apt-get update && apt-get install -y \
 # Install the PHP MySQL PDO driver
 RUN docker-php-ext-install pdo pdo_mysql
 
-# Install Pyrogram and tgcrypto for Telegram session generation
-RUN pip3 install --no-cache-dir pyrogram tgcrypto --break-system-packages
+# Install Pyrogram ONLY (dropping tgcrypto to avoid C-struct packing errors)
+RUN pip3 install --no-cache-dir pyrogram --break-system-packages
 
 # Copy the entire repository into /app
 COPY . /app/
