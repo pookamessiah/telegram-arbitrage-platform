@@ -9,18 +9,18 @@ RUN apt-get update && apt-get install -y \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install the PHP MySQL PDO driver so it can connect to your database
+# Install the PHP MySQL PDO driver
 RUN docker-php-ext-install pdo pdo_mysql
 
 # Install Pyrogram and tgcrypto for Telegram session generation
 RUN pip3 install --no-cache-dir pyrogram tgcrypto --break-system-packages
 
-# Set working directory
-WORKDIR /var/www/html
+# Copy the entire repository into /app
+COPY . /app/
 
-# Copy application files
-COPY . /var/www/html/
+# Set working directory to your frontend-php folder for Apache/PHP server
+WORKDIR /app/frontend-php
 
 # Expose port and run PHP built-in server binding to Railway's dynamic $PORT
 EXPOSE 8080
-CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} -t /var/www/html"]
+CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} -t /app/frontend-php"]
