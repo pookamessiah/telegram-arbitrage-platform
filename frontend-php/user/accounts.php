@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "phone_number" => $phone_number
             ]);
 
-            $python_path = realpath(__DIR__ . '/../../backend-python/telegram_auth_helper.py');
+            $python_path = '/app/backend-python/telegram_auth_helper.py';
             $command = "python3 " . escapeshellarg($python_path);
             
             $descriptors = [
@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "password" => $password ?: null
             ]);
 
-            $python_path = realpath(__DIR__ . '/../../backend-python/telegram_auth_helper.py');
+           $python_path = '/app/backend-python/telegram_auth_helper.py';
             $command = "python3 " . escapeshellarg($python_path);
             
             $descriptors = [
