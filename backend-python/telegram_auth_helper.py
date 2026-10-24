@@ -3,7 +3,7 @@ import sys
 import json
 import asyncio
 from pyrogram import Client
-from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PhoneCodeExpired, FloodWait
+from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PhoneCodeExpired, FloodWait, ApiIdInvalid, PhoneNumberInvalid
 
 async def main():
     try:
@@ -14,7 +14,6 @@ async def main():
         phone_number = input_data.get("phone_number")
         
         if action == "send_code":
-            # Initialize an in-memory Pyrogram client and send the OTP code
             async with Client(":memory:", api_id=api_id, api_hash=api_hash, in_memory=True) as app:
                 sent_code = await app.send_code(phone_number)
                 session_str = await app.export_session_string()
@@ -30,7 +29,6 @@ async def main():
             session_string = input_data.get("session_string", "")
             password = input_data.get("password", None)
             
-            # Resume session from the string generated during send_code step
             async with Client(
                 "verify_session", 
                 api_id=api_id, 
@@ -53,7 +51,9 @@ async def main():
             print(json.dumps({"status": "error", "message": "Invalid action specified."}))
             
     except Exception as e:
-        print(json.dumps({"status": "error", "message": str(e)}))
+        # Return the exact exception class name and message for debugging
+        error_msg = f"{type(e).__name__}: {str(e)}"
+        print(json.dumps({"status": "error", "message": error_msg}))
 
 if __name__ == "__main__":
     asyncio.run(main())
