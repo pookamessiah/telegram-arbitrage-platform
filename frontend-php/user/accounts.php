@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $command = "/usr/bin/python3 " . escapeshellarg($python_path);
                 // ... (keep your proc_open execution and stream reading as is) ...
 
-                $response = json_decode($output, true);
+               $response = json_decode($output, true);
                 if ($response && isset($response['status']) && $response['status'] === 'success') {
                     $_SESSION['tg_auth'] = [
                         'phone_number' => $phone_number,
@@ -65,8 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $auth_step = 2;
                     $success_msg = "Verification code sent to your Telegram app!";
                 } else {
-                    // Diagnostic raw output display
-                    $error_msg = "DEBUG - Raw Stdout: [" . htmlspecialchars($output) . "] | Raw Stderr: [" . htmlspecialchars($error_output) . "j";
+                    $details = $response['message'] ?? (!empty(trim($error_output)) ? trim($error_output) : 'Failed to send code.');
+                    $error_msg = "Telegram Error: " . htmlspecialchars($details);
                 }
             } else {
                 $error_msg = "Failed to execute Python authentication helper.";
