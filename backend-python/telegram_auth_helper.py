@@ -1,76 +1,59 @@
+#!/usr/bin/env python3
 import sys
 import json
 import asyncio
 from pyrogram import Client
-from pyrogram.errors import SessionPasswordNeeded
+from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PhoneCodeExpired, FloodWait
 
-async def handle_action():
-    if len(sys.argv) < 2:
-        print(json.dumps({"success": False, "error": "No action specified."}))
-        return
-
-    action = sys.argv[1]
-
-    if action == "send_code":
-        # Args: api_id, api_hash, phone_number
-        if len(sys.argv) < 5:
-            print(json.dumps({"success": False, "error": "Missing arguments for send_code."}))
-            return
+async def main():
+    try:
+        input_data = json.loads(sys.stdin.read())
+        action = input_data.get("action")
+        api_id = int(input_data.get("api_id"))
+        api_hash = input_data.get("api_hash")
+        phone_number = input_data.get("phone_number")
         
-        api_id = int(sys.argv[2])
-        api_hash = sys.argv[3]
-        phone_number = sys.argv[4]
-
-        # Use an in-memory or temporary session name
-        app = Client(f"session_{phone_number}", api_id=api_id, api_hash=api_hash, in_memory=True)
-        try:
-            await app.connect()
-            sent_code = await app.send_code(phone_number)
-            print(json.dumps({
-                "success": True,
-                "phone_code_hash": sent_code.phone_code_hash
-            }))
-        except Exception as e:
-            print(json.dumps({"success": False, "error": str(e)}))
-        finally:
-            if app.is_connected:
-                await app.disconnect()
-
-    elif action == "verify_code":
-        # Args: api_id, api_hash, phone_number, phone_code_hash, code, [password]
-        if len(sys.argv) < 7:
-            print(json.dumps({"success": False, "error": "Missing arguments for verify_code."}))
-            return
-
-        api_id = int(sys.argv[2])
-        api_hash = sys.argv[3]
-        phone_number = sys.argv[4]
-        phone_code_hash = sys.argv[5]
-        code = sys.argv[6]
-        password = sys.argv[7] if len(sys.argv) > 8 and sys.argv[7] else None
-
-        app = Client(f"session_{phone_number}", api_id=api_id, api_hash=api_hash, in_memory=True)
-        try:
-            await app.connect()
-            try:
-                await app.sign_in(phone_number, phone_code_hash, code)
-            except SessionPasswordNeeded:
-                if password:
-                    await app.check_password(password)
-                else:
-                    print(json.dumps({"success": False, "error": "2FA_REQUIRED"}))
-                    return
-
-            session_string = await app.export_session_string()
-            print(json.dumps({
-                "success": True,
-                "session_string": session_string
-            }))
-        except Exception as e:
-            print(json.dumps({"success": False, "error": str(e)}))
-        finally:
-            if app.is_connected:
-                await app.disconnect()
+        if action == "send_code":
+            # Initialize an in-memory Pyrogram client and send the OTP code
+            async with Client(":memory:", api_id=api_id, api_hash=api_hash, in_memory=True) as app:
+                sent_code = await app.send_code(phone_number)
+                session_str = await app.export_session_string()
+                print(json.dumps({
+                    "status": "success",
+                    "phone_code_hash": sent_code.phone_code_hash,
+                    "session_string": session_str
+                }))
+        
+        elif action == "verify_code":
+            phone_code_hash = input_data.get("phone_code_hash")
+            code = input_data.get("code")
+            session_string = input_data.get("session_string", "")
+            password = input_data.get("password", None)
+            
+            # Resume session from the string generated during send_code step
+            async with Client(
+                "verify_session", 
+                api_id=api_id, 
+                api_hash=api_hash, 
+                session_string=session_string if session_string else None,
+                in_memory=True if not session_string else False
+            ) as app:
+                try:
+                    await app.sign_in(phone_number, phone_code_hash, code)
+                    final_session = await app.export_session_string()
+                    print(json.dumps({"status": "success", "session_string": final_session}))
+                except SessionPasswordNeeded:
+                    if password:
+                        await app.check_password(password)
+                        final_session = await app.export_session_string()
+                        print(json.dumps({"status": "success", "session_string": final_session}))
+                    else:
+                        print(json.dumps({"status": "password_required", "message": "Two-step verification password required."}))
+        else:
+            print(json.dumps({"status": "error", "message": "Invalid action specified."}))
+            
+    except Exception as e:
+        print(json.dumps({"status": "error", "message": str(e)}))
 
 if __name__ == "__main__":
-    asyncio.run(handle_action())
+    asyncio.run(main())
