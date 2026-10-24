@@ -18,9 +18,9 @@ RUN pip3 install --no-cache-dir pyrogram tgcrypto --break-system-packages
 # Copy the entire repository into /app
 COPY . /app/
 
-# Set working directory to your frontend-php folder for Apache/PHP server
+# Set working directory to your frontend-php folder
 WORKDIR /app/frontend-php
 
-# Expose port and run PHP built-in server binding to Railway's dynamic $PORT
+# Expose port and run PHP built-in server with the custom router
 EXPOSE 8080
-CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} -t /app/frontend-php"]
+CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} router.php"]
