@@ -2,6 +2,7 @@
 import sys
 import json
 import asyncio
+import traceback
 from pyrogram import Client
 
 async def main():
@@ -13,12 +14,19 @@ async def main():
 
         input_data = json.loads(raw_input)
         action = input_data.get("action")
-        api_id = int(input_data.get("api_id"))
-        api_hash = input_data.get("api_hash")
-        phone_number = input_data.get("phone_number")
+        
+        # Safely validate and cast api_id to a strict integer
+        raw_api_id = input_data.get("api_id")
+        try:
+            api_id = int(raw_api_id) if raw_api_id is not None else 0
+        except (ValueError, TypeError):
+            print(json.dumps({"status": "error", "message": f"Invalid API ID format received: {raw_api_id}. Must be an integer."}))
+            return
+
+        api_hash = str(input_data.get("api_hash", ""))
+        phone_number = str(input_data.get("phone_number", ""))
         
         if action == "send_code":
-            # Initialize Client without interactive prompts
             app = Client(
                 name="temp_auth_session",
                 api_id=api_id,
@@ -76,6 +84,7 @@ async def main():
             print(json.dumps({"status": "error", "message": "Invalid action specified."}))
             
     except Exception as e:
+        tb = traceback.format_exc()
         error_msg = f"{type(e).__name__}: {str(e)}"
         print(json.dumps({"status": "error", "message": error_msg}))
 
